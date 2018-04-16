@@ -5,10 +5,15 @@ REGISTRY_URI="push.registry.devshift.net"
 REGISTRY_NS="fabric8"
 REGISTRY_IMAGE="launcher-backend"
 DOCKER_HUB_URL=${REGISTRY_NS}/${REGISTRY_IMAGE}
-REGISTRY_URL=${REGISTRY_URI}/${DOCKER_HUB_URL}
 BUILDER_IMAGE="launcher-backend-builder"
 BUILDER_CONT="launcher-backend-builder-container"
 DEPLOY_IMAGE="launcher-backend-deploy"
+
+if [ "$TARGET" = "rhel" ]; then
+    REGISTRY_URL=${REGISTRY_URI}/osio-prod/${DOCKER_HUB_URL}   
+else
+    REGISTRY_URL=${REGISTRY_URI}/${DOCKER_HUB_URL}
+fi
 
 TARGET_DIR="target"
 
@@ -59,7 +64,11 @@ docker exec ${BUILDER_CONT} mvn -B clean install -DskipTests -Ddownload.plugin.s
 docker exec -u root ${BUILDER_CONT} cp web/target/launcher-backend-swarm.jar /${TARGET_DIR}
 
 #BUILD DEPLOY IMAGE
-docker build -t ${DEPLOY_IMAGE} -f Dockerfile.deploy .
+if [ "$TARGET" = "rhel" ]; then
+    docker build -t ${DEPLOY_IMAGE} -f Dockerfile.deploy.rhel .
+else
+    docker build -t ${DEPLOY_IMAGE} -f Dockerfile.deploy .
+fi
 
 #PUSH
 if [ -z $CICO_LOCAL ]; then
